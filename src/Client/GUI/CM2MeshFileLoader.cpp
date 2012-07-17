@@ -727,23 +727,23 @@ for(u32 i=0; i < currentView.Submesh.num;i++)//
                 break;
               case 2:  //alpha blend
                 MeshBuffer->getMaterial().MaterialType=video::EMT_ONETEXTURE_BLEND;
-                MeshBuffer->getMaterial().MaterialTypeParam = pack_texureBlendFunc(video::EBF_SRC_ALPHA, video::EBF_ONE_MINUS_SRC_ALPHA,  video::EMFN_MODULATE_1X, video::EAS_TEXTURE|video::EAS_VERTEX_COLOR);
+                MeshBuffer->getMaterial().MaterialTypeParam = pack_textureBlendFunc(video::EBF_SRC_ALPHA, video::EBF_ONE_MINUS_SRC_ALPHA,  video::EMFN_MODULATE_1X, video::EAS_TEXTURE|video::EAS_VERTEX_COLOR);
                 break;
               case 3:  //additive
                 MeshBuffer->getMaterial().MaterialType=video::EMT_ONETEXTURE_BLEND;
-                MeshBuffer->getMaterial().MaterialTypeParam = pack_texureBlendFunc(video::EBF_SRC_COLOR, video::EBF_DST_COLOR, video::EMFN_MODULATE_1X, video::EAS_TEXTURE|video::EAS_VERTEX_COLOR);  // | video::EAS_VERTEX_COLOR);
+                MeshBuffer->getMaterial().MaterialTypeParam = pack_textureBlendFunc(video::EBF_SRC_COLOR, video::EBF_DST_COLOR, video::EMFN_MODULATE_1X, video::EAS_TEXTURE|video::EAS_VERTEX_COLOR);  // | video::EAS_VERTEX_COLOR);
                 break;
               case 4:  //additive alpha
                 MeshBuffer->getMaterial().MaterialType=video::EMT_ONETEXTURE_BLEND;
-                MeshBuffer->getMaterial().MaterialTypeParam = pack_texureBlendFunc(video::EBF_SRC_ALPHA, video::EBF_ONE, video::EMFN_MODULATE_2X, video::EAS_TEXTURE|video::EAS_VERTEX_COLOR);
+                MeshBuffer->getMaterial().MaterialTypeParam = pack_textureBlendFunc(video::EBF_SRC_ALPHA, video::EBF_ONE, video::EMFN_MODULATE_2X, video::EAS_TEXTURE|video::EAS_VERTEX_COLOR);
                 break;
               case 5:  //modulate blend
                 MeshBuffer->getMaterial().MaterialType=video::EMT_ONETEXTURE_BLEND;
-                MeshBuffer->getMaterial().MaterialTypeParam = pack_texureBlendFunc(video::EBF_SRC_COLOR, video::EBF_DST_COLOR, video::EMFN_MODULATE_1X, video::EAS_TEXTURE|video::EAS_VERTEX_COLOR);
+                MeshBuffer->getMaterial().MaterialTypeParam = pack_textureBlendFunc(video::EBF_SRC_COLOR, video::EBF_DST_COLOR, video::EMFN_MODULATE_1X, video::EAS_TEXTURE|video::EAS_VERTEX_COLOR);
                 break;
               case 6:  //Lumirion: not sure exatly so I'm using modulate2x blend like wowmodelviewer or could use EMT_TRANSPARENT_ADD_COLOR
                 MeshBuffer->getMaterial().MaterialType=video::EMT_ONETEXTURE_BLEND;
-                MeshBuffer->getMaterial().MaterialTypeParam = pack_texureBlendFunc(video::EBF_DST_COLOR, video::EBF_SRC_COLOR, video::EMFN_MODULATE_2X, video::EAS_TEXTURE|video::EAS_VERTEX_COLOR);
+                MeshBuffer->getMaterial().MaterialTypeParam = pack_textureBlendFunc(video::EBF_DST_COLOR, video::EBF_SRC_COLOR, video::EMFN_MODULATE_2X, video::EAS_TEXTURE|video::EAS_VERTEX_COLOR);
                 break;
             }
         }

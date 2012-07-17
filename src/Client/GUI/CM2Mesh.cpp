@@ -13,7 +13,7 @@ namespace scene
 
 //! constructor
 CM2Mesh::CM2Mesh()
-: SkinningBuffers(0), HasAnimation(0), PreparedForSkinning(0),
+: SkinningBuffers(0), HasAnimation(0), PreparedForSkinning(0), FramesPerSecond(25.f),
     AnimationFrames(0.f), LastAnimatedFrame(0.f),
     AnimateNormals(true), HardwareSkinning(0), InterpolationMode(EIM_LINEAR)
 {
@@ -44,6 +44,23 @@ CM2Mesh::~CM2Mesh()
 u32 CM2Mesh::getFrameCount() const
 {
     return core::floor32(AnimationFrames);
+}
+
+
+//! Gets the default animation speed of the animated mesh.
+/** \return Amount of frames per second. If the amount is 0, it is a static, non animated mesh. */
+f32 CM2Mesh::getAnimationSpeed() const
+{
+    return FramesPerSecond;
+}
+
+
+//! Gets the frame count of the animated mesh.
+/** \param fps Frames per second to play the animation with. If the amount is 0, it is not animated.
+The actual speed is set in the scene node the mesh is instantiated in.*/
+void CM2Mesh::setAnimationSpeed(f32 fps)
+{
+    FramesPerSecond=fps;
 }
 
 

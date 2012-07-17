@@ -30,6 +30,15 @@ namespace scene
 		//! returns the amount of frames. If the amount is 1, it is a static (=non animated) mesh.
 		virtual u32 getFrameCount() const;
 
+        //! Gets the default animation speed of the animated mesh.
+        /** \return Amount of frames per second. If the amount is 0, it is a static, non animated mesh. */
+        virtual f32 getAnimationSpeed() const;
+
+        //! Gets the frame count of the animated mesh.
+        /** \param fps Frames per second to play the animation with. If the amount is 0, it is not animated.
+        The actual speed is set in the scene node the mesh is instantiated in.*/
+        virtual void setAnimationSpeed(f32 fps);
+
 		//! returns the animated mesh based on a detail level (which is ignored)
 		virtual IMesh* getMesh(s32 frame, s32 detailLevel=255, s32 startFrameLoop=-1, s32 endFrameLoop=-1);
 
@@ -192,6 +201,7 @@ private:
 		bool PreparedForSkinning;
 
 		f32 AnimationFrames;
+        f32 FramesPerSecond;
 
 		f32 LastAnimatedFrame;
         bool SkinnedLastFrame;

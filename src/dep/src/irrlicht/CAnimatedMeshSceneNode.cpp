@@ -18,6 +18,11 @@
 #include "IAnimatedMesh.h"
 #include "quaternion.h"
 
+#include "IGUIEnvironment.h"
+#include "IGUIFont.h"
+#include "ISceneCollisionManager.h"
+
+#include "../../../Client/GUI/CM2Mesh.h"
 
 namespace irr
 {
@@ -331,7 +336,12 @@ void CAnimatedMeshSceneNode::render()
 
 			// only render transparent buffer if this is the transparent render pass
 			// and solid only in solid pass
-			if (transparent == isTransparentPass)
+            //PSEUWOW M2 RENDERING
+            //Render only those submeshes that are actually active
+            bool renderSubmesh = true;
+            if(Mesh->getMeshType() == EAMT_M2)
+              renderSubmesh = ((CM2Mesh*)Mesh)->getGeoSetRender(i);
+			if (transparent == isTransparentPass && renderSubmesh) //PSEUWOW M2 RENDERING END
 			{
 				scene::IMeshBuffer* mb = m->getMeshBuffer(i);
 				const video::SMaterial& material = ReadOnlyMaterials ? mb->getMaterial() : Materials[i];
@@ -392,13 +402,26 @@ void CAnimatedMeshSceneNode::render()
 		// show skeleton
 		if (DebugDataVisible & scene::EDS_SKELETON)
 		{
-			if (Mesh->getMeshType() == EAMT_SKINNED)
+			if (Mesh->getMeshType() == EAMT_SKINNED|| Mesh->getMeshType() == EAMT_M2)
 			{
 				// draw skeleton
-
+				//PSEUWOW
+                ISceneCollisionManager* Coll = SceneManager->getSceneCollisionManager();
+                irr::gui::IGUIFont* Font = SceneManager->getGUIEnvironment()->getBuiltInFont();
+                //PSEUWOW END
 				for (u32 g=0; g < ((ISkinnedMesh*)Mesh)->getAllJoints().size(); ++g)
 				{
 					ISkinnedMesh::SJoint *joint=((ISkinnedMesh*)Mesh)->getAllJoints()[g];
+                    //PSEUWOW
+                    core::vector3df a = joint->GlobalAnimatedMatrix.getTranslation()-core::vector3df(0.05,0.05,0.05);
+                    core::vector3df b = joint->GlobalAnimatedMatrix.getTranslation()+core::vector3df(0.05,0.05,0.05);
+                    core::aabbox3df marker = core::aabbox3df(a,b);
+                    driver->draw3DBox(marker,video::SColor(255,51,66,255));
+
+                    core::position2d<s32> pos = Coll->getScreenCoordinatesFrom3DPosition(a, SceneManager->getActiveCamera());
+                    core::rect<s32> r(pos, core::dimension2d<s32>(1,1));
+                    Font->draw(core::stringw(g).c_str(), r, video::SColor(255,51,255,66), true, true);
+                    //PSEUWOW END
 
 					for (u32 n=0;n<joint->Children.size();++n)
 					{
@@ -692,6 +715,25 @@ bool CAnimatedMeshSceneNode::removeChild(ISceneNode* child)
 	return false;
 }
 
+//PSEUWOW
+//! Starts a M2 animation.
+bool CAnimatedMeshSceneNode::setM2Animation(u32 animID)
+{
+    if (!Mesh || Mesh->getMeshType() != EAMT_M2)
+        return false;
+
+    CM2Mesh* m = (CM2Mesh*)Mesh;
+
+    s32 begin = -1, end = -1;
+    m->getFrameLoop(animID, begin, end); //Eventually different speeds are necessary?
+    if(begin == -1 || end == -1)
+      return false;
+
+//     setAnimationSpeed( f32(speed) );
+    setFrameLoop(begin, end);
+    return true;
+}
+//PSEUWOW END
 
 //! Starts a MD2 animation.
 bool CAnimatedMeshSceneNode::setMD2Animation(EMD2_ANIMATION_TYPE anim)

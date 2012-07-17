@@ -94,6 +94,7 @@ namespace scene
 		private:
 			//! Internal members used by CSkinnedMesh
 			friend class CSkinnedMesh;
+            friend class CM2Mesh;   //PSEUWOW
 			bool *Moved;
 			core::vector3df StaticPos;
 			core::vector3df StaticNormal;
