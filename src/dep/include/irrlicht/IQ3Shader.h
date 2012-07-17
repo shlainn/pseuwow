@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2010 Nikolaus Gebhardt / Thomas Alten
+// Copyright (C) 2006-2011 Nikolaus Gebhardt / Thomas Alten
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
@@ -269,7 +269,7 @@ namespace quake3
 					// gl_zero gl_src_color == gl_dst_color gl_zero
 					case video::EBF_SRC_COLOR:
 						blendfunc.type = video::EMT_ONETEXTURE_BLEND;
-						blendfunc.param0 = video::pack_texureBlendFunc ( video::EBF_DST_COLOR, video::EBF_ZERO, blendfunc.modulate );
+						blendfunc.param0 = video::pack_textureBlendFunc ( video::EBF_DST_COLOR, video::EBF_ZERO, blendfunc.modulate );
 						blendfunc.isTransparent = 1;
 						resolved = 1;
 						break;
@@ -314,7 +314,7 @@ namespace quake3
 			case 12:
 				// filter = gl_dst_color gl_zero or gl_zero gl_src_color
 				blendfunc.type = video::EMT_ONETEXTURE_BLEND;
-				blendfunc.param0 = video::pack_texureBlendFunc ( video::EBF_DST_COLOR, video::EBF_ZERO, blendfunc.modulate );
+				blendfunc.param0 = video::pack_textureBlendFunc ( video::EBF_DST_COLOR, video::EBF_ZERO, blendfunc.modulate );
 				blendfunc.isTransparent = 1;
 				resolved = 1;
 				break;
@@ -346,7 +346,7 @@ namespace quake3
 		if ( 0 == resolved )
 		{
 			blendfunc.type = video::EMT_ONETEXTURE_BLEND;
-			blendfunc.param0 = video::pack_texureBlendFunc (
+			blendfunc.param0 = video::pack_textureBlendFunc (
 					(video::E_BLEND_FACTOR) srcFact,
 					(video::E_BLEND_FACTOR) dstFact,
 					blendfunc.modulate);
@@ -771,14 +771,19 @@ namespace quake3
 				io::IFileSystem *fileSystem,
 				video::IVideoDriver* driver)
 	{
-		static const char * extension[2] =
+		static const char* extension[] =
 		{
 			".jpg",
-			".tga"
+			".jpeg",
+			".png",
+			".dds",
+			".tga",
+			".bmp",
+			".pcx"
 		};
 
 		tStringList stringList;
-		getAsStringList ( stringList, -1, name, startPos );
+		getAsStringList(stringList, -1, name, startPos);
 
 		textures.clear();
 
@@ -786,7 +791,7 @@ namespace quake3
 		for ( u32 i = 0; i!= stringList.size (); ++i )
 		{
 			video::ITexture* texture = 0;
-			for ( u32 g = 0; g != 2 ; ++g )
+			for (u32 g = 0; g != 7 ; ++g)
 			{
 				core::cutFilenameExtension ( loadFile, stringList[i] );
 

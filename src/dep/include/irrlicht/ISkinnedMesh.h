@@ -1,4 +1,4 @@
-// Copyright (C) 2002-2010 Nikolaus Gebhardt
+// Copyright (C) 2002-2011 Nikolaus Gebhardt
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
@@ -94,7 +94,6 @@ namespace scene
 		private:
 			//! Internal members used by CSkinnedMesh
 			friend class CSkinnedMesh;
-            friend class CM2Mesh;   //PSEUWOW
 			bool *Moved;
 			core::vector3df StaticPos;
 			core::vector3df StaticNormal;
@@ -125,7 +124,7 @@ namespace scene
 		//! Joints
 		struct SJoint
 		{
-			SJoint() : UseAnimationFrom(0), LocalAnimatedMatrix_Animated(false), GlobalSkinningSpace(false),
+			SJoint() : UseAnimationFrom(0), GlobalSkinningSpace(false),
 				positionHint(-1),scaleHint(-1),rotationHint(-1)
 			{
 			}
@@ -170,8 +169,6 @@ namespace scene
             friend class CM2Mesh;   //PSEUWOW
 
 			SJoint *UseAnimationFrom;
-			bool LocalAnimatedMatrix_Animated;
-
 			bool GlobalSkinningSpace;
 
 			s32 positionHint;

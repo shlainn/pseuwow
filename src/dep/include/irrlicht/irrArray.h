@@ -1,4 +1,4 @@
-// Copyright (C) 2002-2010 Nikolaus Gebhardt
+// Copyright (C) 2002-2011 Nikolaus Gebhardt
 // This file is part of the "Irrlicht Engine" and the "irrXML" project.
 // For conditions of distribution and use, see copyright notice in irrlicht.h and irrXML.h
 
@@ -62,6 +62,9 @@ public:
 	/** \param new_size New size of array. */
 	void reallocate(u32 new_size)
 	{
+		if (allocated==new_size)
+			return;
+
 		T* old_data = data;
 
 		data = allocator.allocate(new_size); //new T[new_size];
@@ -558,12 +561,12 @@ public:
 
 		for (i=index+count; i<used; ++i)
 		{
-			if (i > index+count)
+			if (i-count >= index+count)	// not already destructed before loop
 				allocator.destruct(&data[i-count]);
 
 			allocator.construct(&data[i-count], data[i]); // data[i-count] = data[i];
 
-			if (i >= used-count)
+			if (i >= used-count)	// those which are not overwritten
 				allocator.destruct(&data[i]);
 		}
 

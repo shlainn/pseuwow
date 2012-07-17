@@ -1,4 +1,4 @@
-// Copyright (C) 2002-2010 Nikolaus Gebhardt
+// Copyright (C) 2002-2011 Nikolaus Gebhardt
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
@@ -24,6 +24,11 @@ enum EIntersectionRelation3D
 };
 
 //! Template plane class with some intersection testing methods.
+/** It has to be ensured, that the normal is always normalized. The constructors
+    and setters of this class will not ensure this automatically. So any normal
+    passed in has to be normalized in advance. No change to the normal will be
+    made by any of the class methods.
+*/
 template <class T>
 class plane3d
 {

@@ -612,7 +612,7 @@
 					RelativePath=".\..\..\include\IAnimatedMeshMD2.h">
 				</File>
 				<File
-					RelativePath=".\..\..\include\IAnimatedMeshMS3D.h">
+					RelativePath=".\..\..\include\IAnimatedMeshMD3.h">
 				</File>
 				<File
 					RelativePath=".\..\..\include\IAnimatedMeshSceneNode.h">
@@ -673,6 +673,9 @@
 				</File>
 				<File
 					RelativePath=".\..\..\include\ISceneCollisionManager.h">
+				</File>
+				<File
+					RelativePath=".\..\..\include\ISceneLoader.h">
 				</File>
 				<File
 					RelativePath=".\..\..\include\ISceneManager.h">
@@ -1012,6 +1015,12 @@
 		<Filter
 			Name="video impl">
 			<File
+				RelativePath="CCgMaterialRenderer.cpp">
+			</File>
+			<File
+				RelativePath="CCgMaterialRenderer.h">
+			</File>
+			<File
 				RelativePath="CVideoModeList.cpp">
 			</File>
 			<File
@@ -1082,6 +1091,12 @@
 			</Filter>
 			<Filter
 				Name="OpenGL">
+				<File
+					RelativePath=".\COpenGLCgMaterialRenderer.cpp">
+				</File>
+				<File
+					RelativePath=".\COpenGLCgMaterialRenderer.h">
+				</File>
 				<File
 					RelativePath="COpenGLDriver.cpp">
 				</File>
@@ -1299,6 +1314,12 @@
 			<Filter
 				Name="Direct3D9">
 				<File
+					RelativePath="CD3D9CgMaterialRenderer.cpp">
+				</File>
+				<File
+					RelativePath="CD3D9CgMaterialRenderer.h">
+				</File>
+				<File
 					RelativePath="CD3D9Driver.cpp">
 				</File>
 				<File
@@ -1471,6 +1492,12 @@
 				RelativePath="CMeshManipulator.h">
 			</File>
 			<File
+				RelativePath="CSceneLoaderIrr.cpp">
+			</File>
+			<File
+				RelativePath="CSceneLoaderIrr.h">
+			</File>
+			<File
 				RelativePath="CSceneManager.cpp">
 			</File>
 			<File
@@ -1486,6 +1513,12 @@
 				</File>
 				<File
 					RelativePath="C3DSMeshFileLoader.h">
+				</File>
+				<File
+					RelativePath="CSMFMeshFileLoader.cpp">
+				</File>
+				<File
+					RelativePath="CSMFMeshFileLoader.h">
 				</File>
 				<File
 					RelativePath="CAnimatedMeshMD2.cpp">
@@ -2184,9 +2217,6 @@
 						RelativePath="jpeglib\jchuff.c">
 					</File>
 					<File
-						RelativePath="jpeglib\jchuff.h">
-					</File>
-					<File
 						RelativePath="jpeglib\jcinit.c">
 					</File>
 					<File
@@ -2245,9 +2275,6 @@
 					</File>
 					<File
 						RelativePath="jpeglib\jdhuff.c">
-					</File>
-					<File
-						RelativePath="jpeglib\jdhuff.h">
 					</File>
 					<File
 						RelativePath="jpeglib\jdinput.c">

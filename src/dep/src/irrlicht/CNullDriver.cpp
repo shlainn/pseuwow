@@ -1,4 +1,4 @@
-// Copyright (C) 2002-2010 Nikolaus Gebhardt
+// Copyright (C) 2002-2011 Nikolaus Gebhardt
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
@@ -11,8 +11,10 @@
 #include "IImageLoader.h"
 #include "IImageWriter.h"
 #include "IMaterialRenderer.h"
+#include "IAnimatedMeshSceneNode.h"
 #include "CMeshManipulator.h"
 #include "CColorConverter.h"
+#include "IAttributeExchangingObject.h"
 
 
 namespace irr
@@ -32,6 +34,9 @@ IImageLoader* createImageLoaderTGA();
 //! creates a loader which is able to load psd images
 IImageLoader* createImageLoaderPSD();
 
+//! creates a loader which is able to load dds images
+IImageLoader* createImageLoaderDDS();
+
 //! creates a loader which is able to load pcx images
 IImageLoader* createImageLoaderPCX();
 
@@ -41,14 +46,17 @@ IImageLoader* createImageLoaderPNG();
 //! creates a loader which is able to load WAL images
 IImageLoader* createImageLoaderWAL();
 
+//! creates a loader which is able to load halflife images
+IImageLoader* createImageLoaderHalfLife();
+
+//! creates a loader which is able to load lmp images
+IImageLoader* createImageLoaderLMP();
+
 //! creates a loader which is able to load ppm/pgm/pbm images
 IImageLoader* createImageLoaderPPM();
 
 //! creates a loader which is able to load rgb images
 IImageLoader* createImageLoaderRGB();
-
-//! creates a loader which is able to load rgb images
-IImageLoader* createImageLoaderBLP();
 
 
 //! creates a writer which is able to save bmp images
@@ -72,7 +80,6 @@ IImageWriter* createImageWriterPNG();
 //! creates a writer which is able to save ppm images
 IImageWriter* createImageWriterPPM();
 
-
 //! constructor
 CNullDriver::CNullDriver(io::IFileSystem* io, const core::dimension2d<u32>& screenSize)
 : FileSystem(io), MeshManipulator(0), ViewPort(0,0,0,0), ScreenSize(screenSize),
@@ -82,6 +89,22 @@ CNullDriver::CNullDriver(io::IFileSystem* io, const core::dimension2d<u32>& scre
 	#ifdef _DEBUG
 	setDebugName("CNullDriver");
 	#endif
+
+	DriverAttributes = new io::CAttributes();
+	DriverAttributes->addInt("MaxTextures", _IRR_MATERIAL_MAX_TEXTURES_);
+	DriverAttributes->addInt("MaxSupportedTextures", _IRR_MATERIAL_MAX_TEXTURES_);
+	DriverAttributes->addInt("MaxLights", getMaximalDynamicLightAmount());
+	DriverAttributes->addInt("MaxAnisotropy", 1);
+//	DriverAttributes->addInt("MaxUserClipPlanes", 0);
+//	DriverAttributes->addInt("MaxAuxBuffers", 0);
+	DriverAttributes->addInt("MaxMultipleRenderTargets", 1);
+	DriverAttributes->addInt("MaxIndices", -1);
+	DriverAttributes->addInt("MaxTextureSize", -1);
+//	DriverAttributes->addInt("MaxGeometryVerticesOut", 0);
+//	DriverAttributes->addFloat("MaxTextureLODBias", 0.f);
+	DriverAttributes->addInt("Version", 1);
+//	DriverAttributes->addInt("ShaderLanguageVersion", 0);
+//	DriverAttributes->addInt("AntiAlias", 0);
 
 	setFog();
 
@@ -98,26 +121,14 @@ CNullDriver::CNullDriver(io::IFileSystem* io, const core::dimension2d<u32>& scre
 
 	// create surface loader
 
-#ifdef _IRR_COMPILE_WITH_BMP_LOADER_
-	SurfaceLoader.push_back(video::createImageLoaderBMP());
-#endif
-#ifdef _IRR_COMPILE_WITH_JPG_LOADER_
-	SurfaceLoader.push_back(video::createImageLoaderJPG());
-#endif
-#ifdef _IRR_COMPILE_WITH_TGA_LOADER_
-	SurfaceLoader.push_back(video::createImageLoaderTGA());
-#endif
-#ifdef _IRR_COMPILE_WITH_PSD_LOADER_
-	SurfaceLoader.push_back(video::createImageLoaderPSD());
-#endif
-#ifdef _IRR_COMPILE_WITH_PCX_LOADER_
-	SurfaceLoader.push_back(video::createImageLoaderPCX());
-#endif
-#ifdef _IRR_COMPILE_WITH_PNG_LOADER_
-	SurfaceLoader.push_back(video::createImageLoaderPNG());
+#ifdef _IRR_COMPILE_WITH_HALFLIFE_LOADER_
+	SurfaceLoader.push_back(video::createImageLoaderHalfLife());
 #endif
 #ifdef _IRR_COMPILE_WITH_WAL_LOADER_
 	SurfaceLoader.push_back(video::createImageLoaderWAL());
+#endif
+#ifdef _IRR_COMPILE_WITH_LMP_LOADER_
+	SurfaceLoader.push_back(video::createImageLoaderLMP());
 #endif
 #ifdef _IRR_COMPILE_WITH_PPM_LOADER_
 	SurfaceLoader.push_back(video::createImageLoaderPPM());
@@ -125,30 +136,51 @@ CNullDriver::CNullDriver(io::IFileSystem* io, const core::dimension2d<u32>& scre
 #ifdef _IRR_COMPILE_WITH_RGB_LOADER_
 	SurfaceLoader.push_back(video::createImageLoaderRGB());
 #endif
-    SurfaceLoader.push_back(video::createImageLoaderBLP());
+#ifdef _IRR_COMPILE_WITH_PSD_LOADER_
+	SurfaceLoader.push_back(video::createImageLoaderPSD());
+#endif
+#ifdef _IRR_COMPILE_WITH_DDS_LOADER_
+	SurfaceLoader.push_back(video::createImageLoaderDDS());
+#endif
+#ifdef _IRR_COMPILE_WITH_PCX_LOADER_
+	SurfaceLoader.push_back(video::createImageLoaderPCX());
+#endif
+#ifdef _IRR_COMPILE_WITH_TGA_LOADER_
+	SurfaceLoader.push_back(video::createImageLoaderTGA());
+#endif
+#ifdef _IRR_COMPILE_WITH_PNG_LOADER_
+	SurfaceLoader.push_back(video::createImageLoaderPNG());
+#endif
+#ifdef _IRR_COMPILE_WITH_JPG_LOADER_
+	SurfaceLoader.push_back(video::createImageLoaderJPG());
+#endif
+#ifdef _IRR_COMPILE_WITH_BMP_LOADER_
+	SurfaceLoader.push_back(video::createImageLoaderBMP());
+#endif
 
 
-#ifdef _IRR_COMPILE_WITH_BMP_WRITER_
-	SurfaceWriter.push_back(video::createImageWriterBMP());
-#endif
-#ifdef _IRR_COMPILE_WITH_JPG_WRITER_
-	SurfaceWriter.push_back(video::createImageWriterJPG());
-#endif
-#ifdef _IRR_COMPILE_WITH_TGA_WRITER_
-	SurfaceWriter.push_back(video::createImageWriterTGA());
-#endif
-#ifdef _IRR_COMPILE_WITH_PSD_WRITER_
-	SurfaceWriter.push_back(video::createImageWriterPSD());
+#ifdef _IRR_COMPILE_WITH_PPM_WRITER_
+	SurfaceWriter.push_back(video::createImageWriterPPM());
 #endif
 #ifdef _IRR_COMPILE_WITH_PCX_WRITER_
 	SurfaceWriter.push_back(video::createImageWriterPCX());
 #endif
+#ifdef _IRR_COMPILE_WITH_PSD_WRITER_
+	SurfaceWriter.push_back(video::createImageWriterPSD());
+#endif
+#ifdef _IRR_COMPILE_WITH_TGA_WRITER_
+	SurfaceWriter.push_back(video::createImageWriterTGA());
+#endif
+#ifdef _IRR_COMPILE_WITH_JPG_WRITER_
+	SurfaceWriter.push_back(video::createImageWriterJPG());
+#endif
 #ifdef _IRR_COMPILE_WITH_PNG_WRITER_
 	SurfaceWriter.push_back(video::createImageWriterPNG());
 #endif
-#ifdef _IRR_COMPILE_WITH_PPM_WRITER_
-	SurfaceWriter.push_back(video::createImageWriterPPM());
+#ifdef _IRR_COMPILE_WITH_BMP_WRITER_
+	SurfaceWriter.push_back(video::createImageWriterBMP());
 #endif
+
 
 	// set ExposedData to 0
 	memset(&ExposedData, 0, sizeof(ExposedData));
@@ -159,6 +191,7 @@ CNullDriver::CNullDriver(io::IFileSystem* io, const core::dimension2d<u32>& scre
 	InitMaterial2D.Lighting=false;
 	InitMaterial2D.ZWriteEnable=false;
 	InitMaterial2D.ZBuffer=video::ECFN_NEVER;
+	InitMaterial2D.UseMipMaps=false;
 	for (u32 i=0; i<video::MATERIAL_MAX_TEXTURES; ++i)
 	{
 		InitMaterial2D.TextureLayer[i].BilinearFilter=false;
@@ -172,6 +205,9 @@ CNullDriver::CNullDriver(io::IFileSystem* io, const core::dimension2d<u32>& scre
 //! destructor
 CNullDriver::~CNullDriver()
 {
+	if (DriverAttributes)
+		DriverAttributes->drop();
+
 	if (FileSystem)
 		FileSystem->drop();
 
@@ -226,7 +262,7 @@ u32 CNullDriver::getImageLoaderCount() const
 //! Retrieve the given image loader
 IImageLoader* CNullDriver::getImageLoader(u32 n)
 {
-	if(n < SurfaceLoader.size())
+	if (n < SurfaceLoader.size())
 		return SurfaceLoader[n];
 	return 0;
 }
@@ -242,7 +278,7 @@ u32 CNullDriver::getImageWriterCount() const
 //! Retrieve the given image writer
 IImageWriter* CNullDriver::getImageWriter(u32 n)
 {
-	if(n < SurfaceWriter.size())
+	if (n < SurfaceWriter.size())
 		return SurfaceWriter[n];
 	return 0;
 }
@@ -278,6 +314,7 @@ bool CNullDriver::endScene()
 {
 	FPSCounter.registerFrame(os::Timer::getRealTime(), PrimitivesDrawn);
 	updateAllHardwareBuffers();
+	updateAllOcclusionQueries();
 	return true;
 }
 
@@ -293,6 +330,13 @@ void CNullDriver::disableFeature(E_VIDEO_DRIVER_FEATURE feature, bool flag)
 bool CNullDriver::queryFeature(E_VIDEO_DRIVER_FEATURE feature) const
 {
 	return false;
+}
+
+
+//! Get attributes of the actual video driver
+const io::IAttributes& CNullDriver::getDriverAttributes() const
+{
+	return *DriverAttributes;
 }
 
 
@@ -391,7 +435,7 @@ ITexture* CNullDriver::getTexture(const io::path& filename)
 	// Now try to open the file using the complete path.
 	io::IReadFile* file = FileSystem->createAndOpenFile(absolutePath);
 
-	if(!file)
+	if (!file)
 	{
 		// Try to open it using the raw filename.
 		file = FileSystem->createAndOpenFile(filename);
@@ -446,10 +490,10 @@ ITexture* CNullDriver::getTexture(io::IReadFile* file)
 			addTexture(texture);
 			texture->drop(); // drop it because we created it, one grab too much
 		}
-	}
 
-	if (!texture)
-		os::Printer::log("Could not load texture", file->getFileName(), ELL_WARNING);
+		if (!texture)
+			os::Printer::log("Could not load texture", file->getFileName(), ELL_WARNING);
+	}
 
 	return texture;
 }
@@ -729,7 +773,8 @@ void CNullDriver::draw2DImage(const video::ITexture* texture, const core::rect<s
 	const core::rect<s32>& sourceRect, const core::rect<s32>* clipRect,
 	const video::SColor* const colors, bool useAlphaChannelOfTexture)
 {
-	draw2DImage(texture, core::position2d<s32>(destRect.UpperLeftCorner),
+	if (destRect.isValid())
+		draw2DImage(texture, core::position2d<s32>(destRect.UpperLeftCorner),
 				sourceRect, clipRect, colors?colors[0]:video::SColor(0xffffffff),
 				useAlphaChannelOfTexture);
 }
@@ -860,6 +905,7 @@ void CNullDriver::setAmbientLight(const SColorf& color)
 
 //! \return Returns the name of the video driver. Example: In case of the DIRECT3D8
 //! driver, it would return "Direct3D8".
+
 const wchar_t* CNullDriver::getName() const
 {
 	return L"Irrlicht NullDevice";
@@ -870,7 +916,7 @@ const wchar_t* CNullDriver::getName() const
 //! Draws a shadow volume into the stencil buffer. To draw a stencil shadow, do
 //! this: Frist, draw all geometry. Then use this method, to draw the shadow
 //! volume. Then, use IVideoDriver::drawStencilShadow() to visualize the shadow.
-void CNullDriver::drawStencilShadowVolume(const core::vector3df* triangles, s32 count, bool zfail)
+void CNullDriver::drawStencilShadowVolume(const core::array<core::vector3df>& triangles, bool zfail, u32 debugDataVisible)
 {
 }
 
@@ -1043,7 +1089,7 @@ void CNullDriver::makeColorKeyTexture(video::ITexture* texture,
 
 	if (texture->getColorFormat() == ECF_A1R5G5B5)
 	{
-		u16 *p = (u16*)texture->lock(true);
+		u16 *p = (u16*)texture->lock(ETLM_READ_ONLY);
 
 		if (!p)
 		{
@@ -1059,7 +1105,7 @@ void CNullDriver::makeColorKeyTexture(video::ITexture* texture,
 	}
 	else
 	{
-		u32 *p = (u32*)texture->lock(true);
+		u32 *p = (u32*)texture->lock(ETLM_READ_ONLY);
 
 		if (!p)
 		{
@@ -1274,10 +1320,10 @@ IImage* CNullDriver::createImageFromFile(io::IReadFile* file)
 
 	IImage* image = 0;
 
-	u32 i;
+	s32 i;
 
 	// try to load file based on file extension
-	for (i=0; i<SurfaceLoader.size(); ++i)
+	for (i=SurfaceLoader.size()-1; i>=0; --i)
 	{
 		if (SurfaceLoader[i]->isALoadableFileExtension(file->getFileName()))
 		{
@@ -1290,7 +1336,7 @@ IImage* CNullDriver::createImageFromFile(io::IReadFile* file)
 	}
 
 	// try to load file based on what is in it
-	for (i=0; i<SurfaceLoader.size(); ++i)
+	for (i=SurfaceLoader.size()-1; i>=0; --i)
 	{
 		// dito
 		file->seek(0);
@@ -1326,7 +1372,7 @@ bool CNullDriver::writeImageToFile(IImage* image, io::IWriteFile * file, u32 par
 	if(!file)
 		return false;
 
-	for (u32 i=0; i<SurfaceWriter.size(); ++i)
+	for (s32 i=SurfaceWriter.size()-1; i>=0; --i)
 	{
 		if (SurfaceWriter[i]->isAWriteableFileExtension(file->getFileName()))
 		{
@@ -1399,7 +1445,7 @@ IImage* CNullDriver::createImage(ITexture* texture, const core::position2d<s32>&
 {
 	if ((pos==core::position2di(0,0)) && (size == texture->getSize()))
 	{
-		IImage* image = new CImage(texture->getColorFormat(), size, texture->lock(true), false);
+		IImage* image = new CImage(texture->getColorFormat(), size, texture->lock(ETLM_READ_ONLY), false);
 		texture->unlock();
 		return image;
 	}
@@ -1414,12 +1460,13 @@ IImage* CNullDriver::createImage(ITexture* texture, const core::position2d<s32>&
 					core::clamp(static_cast<u32>(size.Height), 0u, texture->getSize().Height)));
 		if (!clamped.isValid())
 			return 0;
-		u8* src = static_cast<u8*>(texture->lock(true));
+		u8* src = static_cast<u8*>(texture->lock(ETLM_READ_ONLY));
 		if (!src)
 			return 0;
 		IImage* image = new CImage(texture->getColorFormat(), clamped.getSize());
 		u8* dst = static_cast<u8*>(image->lock());
-		for (u32 i=clamped.UpperLeftCorner.Y; i<clamped.getHeight(); ++i)
+		src += clamped.UpperLeftCorner.Y * texture->getPitch() + image->getBytesPerPixel() * clamped.UpperLeftCorner.X;
+		for (u32 i=0; i<clamped.getHeight(); ++i)
 		{
 			video::CColorConverter::convert_viaFormat(src, texture->getColorFormat(), clamped.getWidth(), dst, image->getColorFormat());
 			src += texture->getPitch();
@@ -1471,6 +1518,24 @@ void CNullDriver::drawMeshBuffer(const scene::IMeshBuffer* mb)
 		drawHardwareBuffer(HWBuffer);
 	else
 		drawVertexPrimitiveList(mb->getVertices(), mb->getVertexCount(), mb->getIndices(), mb->getIndexCount()/3, mb->getVertexType(), scene::EPT_TRIANGLES, mb->getIndexType());
+}
+
+
+//! Draws the normals of a mesh buffer
+void CNullDriver::drawMeshBufferNormals(const scene::IMeshBuffer* mb, f32 length, SColor color)
+{
+	const u32 count = mb->getVertexCount();
+	const bool normalize = mb->getMaterial().NormalizeNormals;
+
+	for (u32 i=0; i < count; ++i)
+	{
+		core::vector3df normalizedNormal = mb->getNormal(i);
+		if (normalize)
+			normalizedNormal.normalize();
+
+		const core::vector3df& pos = mb->getPosition(i);
+		draw3DLine(pos, pos + (normalizedNormal * length), color);
+	}
 }
 
 
@@ -1547,6 +1612,143 @@ bool CNullDriver::isHardwareBufferRecommend(const scene::IMeshBuffer* mb)
 }
 
 
+//! Create occlusion query.
+/** Use node for identification and mesh for occlusion test. */
+void CNullDriver::addOcclusionQuery(scene::ISceneNode* node, const scene::IMesh* mesh)
+{
+	if (!node)
+		return;
+	if (!mesh)
+	{
+		if ((node->getType() != scene::ESNT_MESH) && (node->getType() != scene::ESNT_ANIMATED_MESH))
+			return;
+		else if (node->getType() == scene::ESNT_MESH)
+			mesh = static_cast<scene::IMeshSceneNode*>(node)->getMesh();
+		else
+			mesh = static_cast<scene::IAnimatedMeshSceneNode*>(node)->getMesh()->getMesh(0);
+		if (!mesh)
+			return;
+	}
+
+	//search for query
+	s32 index = OcclusionQueries.linear_search(SOccQuery(node));
+	if (index != -1)
+	{
+		if (OcclusionQueries[index].Mesh != mesh)
+		{
+			OcclusionQueries[index].Mesh->drop();
+			OcclusionQueries[index].Mesh = mesh;
+			mesh->grab();
+		}
+	}
+	else
+	{
+		OcclusionQueries.push_back(SOccQuery(node, mesh));
+		node->setAutomaticCulling(node->getAutomaticCulling() | scene::EAC_OCC_QUERY);
+	}
+}
+
+
+//! Remove occlusion query.
+void CNullDriver::removeOcclusionQuery(scene::ISceneNode* node)
+{
+	//search for query
+	s32 index = OcclusionQueries.linear_search(SOccQuery(node));
+	if (index != -1)
+	{
+		node->setAutomaticCulling(node->getAutomaticCulling() & ~scene::EAC_OCC_QUERY);
+		OcclusionQueries.erase(index);
+	}
+}
+
+
+//! Remove all occlusion queries.
+void CNullDriver::removeAllOcclusionQueries()
+{
+	for (s32 i=OcclusionQueries.size()-1; i>=0; --i)
+	{
+		removeOcclusionQuery(OcclusionQueries[i].Node);
+	}
+}
+
+
+//! Run occlusion query. Draws mesh stored in query.
+/** If the mesh shall be rendered visible, use
+flag to enable the proper material setting. */
+void CNullDriver::runOcclusionQuery(scene::ISceneNode* node, bool visible)
+{
+	if(!node)
+		return;
+	s32 index = OcclusionQueries.linear_search(SOccQuery(node));
+	if (index==-1)
+		return;
+	OcclusionQueries[index].Run=0;
+	if (!visible)
+	{
+		SMaterial mat;
+		mat.Lighting=false;
+		mat.AntiAliasing=0;
+		mat.ColorMask=ECP_NONE;
+		mat.GouraudShading=false;
+		mat.ZWriteEnable=false;
+		setMaterial(mat);
+	}
+	setTransform(video::ETS_WORLD, node->getAbsoluteTransformation());
+	const scene::IMesh* mesh = OcclusionQueries[index].Mesh;
+	for (u32 i=0; i<mesh->getMeshBufferCount(); ++i)
+	{
+		if (visible)
+			setMaterial(mesh->getMeshBuffer(i)->getMaterial());
+		drawMeshBuffer(mesh->getMeshBuffer(i));
+	}
+}
+
+
+//! Run all occlusion queries. Draws all meshes stored in queries.
+/** If the meshes shall not be rendered visible, use
+overrideMaterial to disable the color and depth buffer. */
+void CNullDriver::runAllOcclusionQueries(bool visible)
+{
+	for (u32 i=0; i<OcclusionQueries.size(); ++i)
+		runOcclusionQuery(OcclusionQueries[i].Node, visible);
+}
+
+
+//! Update occlusion query. Retrieves results from GPU.
+/** If the query shall not block, set the flag to false.
+Update might not occur in this case, though */
+void CNullDriver::updateOcclusionQuery(scene::ISceneNode* node, bool block)
+{
+}
+
+
+//! Update all occlusion queries. Retrieves results from GPU.
+/** If the query shall not block, set the flag to false.
+Update might not occur in this case, though */
+void CNullDriver::updateAllOcclusionQueries(bool block)
+{
+	for (u32 i=0; i<OcclusionQueries.size(); ++i)
+	{
+		if (OcclusionQueries[i].Run==u32(~0))
+			continue;
+		updateOcclusionQuery(OcclusionQueries[i].Node, block);
+		++OcclusionQueries[i].Run;
+		if (OcclusionQueries[i].Run>1000)
+			removeOcclusionQuery(OcclusionQueries[i].Node);
+	}
+}
+
+
+//! Return query result.
+/** Return value is the number of visible pixels/fragments.
+The value is a safe approximation, i.e. can be larger then the
+actual value of pixels. */
+u32 CNullDriver::getOcclusionQueryResult(scene::ISceneNode* node) const
+{
+	return ~0;
+}
+
+
 //! Only used by the internal engine. Used to notify the driver that
 //! the window was resized.
 void CNullDriver::OnResize(const core::dimension2d<u32>& size)
@@ -1608,7 +1810,8 @@ void CNullDriver::setMaterialRendererName(s32 idx, const char* name)
 
 
 //! Creates material attributes list from a material, usable for serialization and more.
-io::IAttributes* CNullDriver::createAttributesFromMaterial(const video::SMaterial& material)
+io::IAttributes* CNullDriver::createAttributesFromMaterial(const video::SMaterial& material,
+	io::SAttributeReadWriteOptions* options)
 {
 	io::CAttributes* attr = new io::CAttributes(this);
 
@@ -1626,7 +1829,16 @@ io::IAttributes* CNullDriver::createAttributesFromMaterial(const video::SMateria
 	core::stringc prefix="Texture";
 	u32 i;
 	for (i=0; i<MATERIAL_MAX_TEXTURES; ++i)
-		attr->addTexture((prefix+core::stringc(i+1)).c_str(), material.getTexture(i));
+	{
+		if (options && (options->Flags&io::EARWF_USE_RELATIVE_PATHS) && options->Filename && material.getTexture(i))
+		{
+			io::path path = FileSystem->getRelativeFilename(
+				FileSystem->getAbsolutePath(material.getTexture(i)->getName()), options->Filename);
+			attr->addTexture((prefix+core::stringc(i+1)).c_str(), material.getTexture(i), path);
+		}
+		else
+			attr->addTexture((prefix+core::stringc(i+1)).c_str(), material.getTexture(i));
+	}
 
 	attr->addBool("Wireframe", material.Wireframe);
 	attr->addBool("GouraudShading", material.GouraudShading);
@@ -1637,8 +1849,12 @@ io::IAttributes* CNullDriver::createAttributesFromMaterial(const video::SMateria
 	attr->addBool("FrontfaceCulling", material.FrontfaceCulling);
 	attr->addBool("FogEnable", material.FogEnable);
 	attr->addBool("NormalizeNormals", material.NormalizeNormals);
+	attr->addBool("UseMipMaps", material.UseMipMaps);
 	attr->addInt("AntiAliasing", material.AntiAliasing);
 	attr->addInt("ColorMask", material.ColorMask);
+	attr->addInt("ColorMaterial", material.ColorMaterial);
+	attr->addInt("PolygonOffsetFactor", material.PolygonOffsetFactor);
+	attr->addEnum("PolygonOffsetDirection", material.PolygonOffsetDirection, video::PolygonOffsetDirectionNames);
 
 	prefix = "BilinearFilter";
 	for (i=0; i<MATERIAL_MAX_TEXTURES; ++i)
@@ -1701,10 +1917,21 @@ void CNullDriver::fillMaterialStructureFromAttributes(video::SMaterial& outMater
 	outMaterial.FrontfaceCulling = attr->getAttributeAsBool("FrontfaceCulling");
 	outMaterial.FogEnable = attr->getAttributeAsBool("FogEnable");
 	outMaterial.NormalizeNormals = attr->getAttributeAsBool("NormalizeNormals");
+	if (attr->existsAttribute("UseMipMaps")) // legacy
+		outMaterial.UseMipMaps = attr->getAttributeAsBool("UseMipMaps");
+	else
+		outMaterial.UseMipMaps = true;
+
 	// default 0 is ok
 	outMaterial.AntiAliasing = attr->getAttributeAsInt("AntiAliasing");
 	if (attr->existsAttribute("ColorMask"))
 		outMaterial.ColorMask = attr->getAttributeAsInt("ColorMask");
+	if (attr->existsAttribute("ColorMaterial"))
+		outMaterial.ColorMaterial = attr->getAttributeAsInt("ColorMaterial");
+	if (attr->existsAttribute("PolygonOffsetFactor"))
+		outMaterial.PolygonOffsetFactor = attr->getAttributeAsInt("PolygonOffsetFactor");
+	if (attr->existsAttribute("PolygonOffsetDirection"))
+		outMaterial.PolygonOffsetDirection = (video::E_POLYGON_OFFSET)attr->getAttributeAsEnumeration("PolygonOffsetDirection", video::PolygonOffsetDirectionNames);
 	prefix = "BilinearFilter";
 	if (attr->existsAttribute(prefix.c_str())) // legacy
 		outMaterial.setFlag(EMF_BILINEAR_FILTER, attr->getAttributeAsBool(prefix.c_str()));
@@ -1826,7 +2053,7 @@ s32 CNullDriver::addHighLevelShaderMaterial(
 	u32 verticesOut,
 	IShaderConstantSetCallBack* callback,
 	E_MATERIAL_TYPE baseMaterial,
-	s32 userData)
+	s32 userData, E_GPU_SHADING_LANGUAGE shadingLang)
 {
 	os::Printer::log("High level shader materials not available (yet) in this driver, sorry");
 	return -1;
@@ -1849,7 +2076,7 @@ s32 CNullDriver::addHighLevelShaderMaterialFromFiles(
 		u32 verticesOut,
 		IShaderConstantSetCallBack* callback,
 		E_MATERIAL_TYPE baseMaterial,
-		s32 userData)
+		s32 userData, E_GPU_SHADING_LANGUAGE shadingLang)
 {
 	io::IReadFile* vsfile = 0;
 	io::IReadFile* psfile = 0;
@@ -1890,7 +2117,7 @@ s32 CNullDriver::addHighLevelShaderMaterialFromFiles(
 		psfile, pixelShaderEntryPointName, psCompileTarget,
 		gsfile, geometryShaderEntryPointName, gsCompileTarget,
 		inType, outType, verticesOut,
-		callback, baseMaterial, userData);
+		callback, baseMaterial, userData, shadingLang);
 
 	if (psfile)
 		psfile->drop();
@@ -1921,7 +2148,7 @@ s32 CNullDriver::addHighLevelShaderMaterialFromFiles(
 		u32 verticesOut,
 		IShaderConstantSetCallBack* callback,
 		E_MATERIAL_TYPE baseMaterial,
-		s32 userData)
+		s32 userData, E_GPU_SHADING_LANGUAGE shadingLang)
 {
 	c8* vs = 0;
 	c8* ps = 0;
@@ -1972,7 +2199,7 @@ s32 CNullDriver::addHighLevelShaderMaterialFromFiles(
 		ps, pixelShaderEntryPointName, psCompileTarget,
 		gs, geometryShaderEntryPointName, gsCompileTarget,
 		inType, outType, verticesOut,
-		callback, baseMaterial, userData);
+		callback, baseMaterial, userData, shadingLang);
 
 	delete [] vs;
 	delete [] ps;
@@ -2107,7 +2334,7 @@ scene::IMeshManipulator* CNullDriver::getMeshManipulator()
 
 
 //! Returns an image created from the last rendered frame.
-IImage* CNullDriver::createScreenShot()
+IImage* CNullDriver::createScreenShot(video::ECOLOR_FORMAT format, video::E_RENDER_TARGET target)
 {
 	return 0;
 }
@@ -2196,6 +2423,23 @@ void CNullDriver::enableMaterial2D(bool enable)
 core::dimension2du CNullDriver::getMaxTextureSize() const
 {
 	return core::dimension2du(0x10000,0x10000); // maybe large enough
+}
+
+
+//! Color conversion convenience function
+/** Convert an image (as array of pixels) from source to destination
+array, thereby converting the color format. The pixel size is
+determined by the color formats.
+\param sP Pointer to source
+\param sF Color format of source
+\param sN Number of pixels to convert, both array must be large enough
+\param dP Pointer to destination
+\param dF Color format of destination
+*/
+void CNullDriver::convertColor(const void* sP, ECOLOR_FORMAT sF, s32 sN,
+		void* dP, ECOLOR_FORMAT dF) const
+{
+	video::CColorConverter::convert_viaFormat(sP, sF, sN, dP, dF);
 }
 
 

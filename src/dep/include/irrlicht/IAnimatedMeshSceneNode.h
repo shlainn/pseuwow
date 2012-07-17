@@ -1,4 +1,4 @@
-// Copyright (C) 2002-2010 Nikolaus Gebhardt
+// Copyright (C) 2002-2011 Nikolaus Gebhardt
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
@@ -130,12 +130,6 @@ namespace scene
 		/** \return Amount of joints in the mesh. */
 		virtual u32 getJointCount() const = 0;
 
-		//! Deprecated command, please use getJointNode
-		virtual ISceneNode* getMS3DJointNode(const c8* jointName) = 0;
-
-		//! Deprecated command, please use getJointNode
-		virtual ISceneNode* getXJointNode(const c8* jointName) = 0;
-
         //PSEUWOW
         //! Starts a M2 animation.
         virtual bool setM2Animation(u32 anim) = 0;
@@ -166,7 +160,7 @@ namespace scene
 		animation with this name could be found. */
 		virtual bool setMD2Animation(const c8* animationName) = 0;
 
-		//! Returns the current displayed frame number.
+		//! Returns the currently displayed frame number.
 		virtual f32 getFrameNr() const = 0;
 		//! Returns the current start frame number.
 		virtual s32 getStartFrame() const = 0;
@@ -184,7 +178,7 @@ namespace scene
 		virtual void setAnimationEndCallback(IAnimationEndCallBack* callback=0) = 0;
 
 		//! Sets if the scene node should not copy the materials of the mesh but use them in a read only style.
-		/* In this way it is possible to change the materials a mesh
+		/** In this way it is possible to change the materials a mesh
 		causing all mesh scene nodes referencing this mesh to change
 		too. */
 		virtual void setReadOnlyMaterials(bool readonly) = 0;
@@ -215,7 +209,7 @@ namespace scene
 		virtual void animateJoints(bool CalculateAbsolutePositions=true) = 0;
 
 		//! render mesh ignoring its transformation.
-		/** Used with ragdolls. Culling is unaffected. */
+		/** Culling is unaffected. */
 		virtual void setRenderFromIdentity( bool On )=0;
 
 		//! Creates a clone of this scene node and its children.

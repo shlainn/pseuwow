@@ -1,4 +1,4 @@
-// Copyright (C) 2002-2010 Nikolaus Gebhardt
+// Copyright (C) 2002-2011 Nikolaus Gebhardt
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
@@ -10,6 +10,7 @@
 #include "IMeshCache.h"
 #include "IAnimatedMesh.h"
 #include "IMaterialRenderer.h"
+#include "IFileSystem.h"
 
 namespace irr
 {
@@ -33,14 +34,12 @@ CMeshSceneNode::CMeshSceneNode(IMesh* mesh, ISceneNode* parent, ISceneManager* m
 }
 
 
-
 //! destructor
 CMeshSceneNode::~CMeshSceneNode()
 {
 	if (Mesh)
 		Mesh->drop();
 }
-
 
 
 //! frame
@@ -108,7 +107,6 @@ void CMeshSceneNode::OnRegisterSceneNode()
 		ISceneNode::OnRegisterSceneNode();
 	}
 }
-
 
 
 //! renders the node.
@@ -197,31 +195,15 @@ void CMeshSceneNode::render()
 
 		if (DebugDataVisible & scene::EDS_NORMALS)
 		{
-
 			// draw normals
-			core::vector3df normalizedNormal;
-			const f32 DebugNormalLength = SceneManager->getParameters()->getAttributeAsFloat(DEBUG_NORMAL_LENGTH);
-			const video::SColor DebugNormalColor = SceneManager->getParameters()->getAttributeAsColor(DEBUG_NORMAL_COLOR);
+			const f32 debugNormalLength = SceneManager->getParameters()->getAttributeAsFloat(DEBUG_NORMAL_LENGTH);
+			const video::SColor debugNormalColor = SceneManager->getParameters()->getAttributeAsColor(DEBUG_NORMAL_COLOR);
+			const u32 count = Mesh->getMeshBufferCount();
 
-			for (u32 g=0; g<Mesh->getMeshBufferCount(); ++g)
+			for (u32 i=0; i != count; ++i)
 			{
-				const scene::IMeshBuffer* mb = Mesh->getMeshBuffer(g);
-				const u32 vSize = video::getVertexPitchFromType(mb->getVertexType());
-				const video::S3DVertex* v = ( const video::S3DVertex*)mb->getVertices();
-				const bool normalize = mb->getMaterial().NormalizeNormals;
-
-				for (u32 i=0; i != mb->getVertexCount(); ++i)
-				{
-					normalizedNormal = v->Normal;
-					if (normalize)
-						normalizedNormal.normalize();
-
-					driver->draw3DLine(v->Pos, v->Pos + (normalizedNormal * DebugNormalLength), DebugNormalColor);
-
-					v = (const video::S3DVertex*) ( (u8*) v+vSize );
-				}
+				driver->drawMeshBufferNormals(Mesh->getMeshBuffer(i), debugNormalLength, debugNormalColor);
 			}
-			driver->setTransform(video::ETS_WORLD, AbsoluteTransformation);
 		}
 
 		// show mesh
@@ -232,7 +214,7 @@ void CMeshSceneNode::render()
 
 			for (u32 g=0; g<Mesh->getMeshBufferCount(); ++g)
 			{
-				driver->drawMeshBuffer( Mesh->getMeshBuffer(g) );
+				driver->drawMeshBuffer(Mesh->getMeshBuffer(g));
 			}
 		}
 	}
@@ -255,8 +237,8 @@ video::SMaterial& CMeshSceneNode::getMaterial(u32 i)
 {
 	if (Mesh && ReadOnlyMaterials && i<Mesh->getMeshBufferCount())
 	{
-		tmpReadOnlyMaterial = Mesh->getMeshBuffer(i)->getMaterial();
-		return tmpReadOnlyMaterial;
+		ReadOnlyMaterial = Mesh->getMeshBuffer(i)->getMaterial();
+		return ReadOnlyMaterial;
 	}
 
 	if (i >= Materials.size())
@@ -264,7 +246,6 @@ video::SMaterial& CMeshSceneNode::getMaterial(u32 i)
 
 	return Materials[i];
 }
-
 
 
 //! returns amount of materials used by this scene node.
@@ -277,19 +258,18 @@ u32 CMeshSceneNode::getMaterialCount() const
 }
 
 
-
 //! Sets a new mesh
 void CMeshSceneNode::setMesh(IMesh* mesh)
 {
-	if (!mesh)
-		return; // won't set null mesh
+	if (mesh)
+	{
+		mesh->grab();
+		if (Mesh)
+			Mesh->drop();
 
-    mesh->grab();
-	if (Mesh)
-		Mesh->drop();
-
-	Mesh = mesh;
-	copyMaterials();
+		Mesh = mesh;
+		copyMaterials();
+	}
 }
 
 
@@ -318,9 +298,18 @@ void CMeshSceneNode::serializeAttributes(io::IAttributes* out, io::SAttributeRea
 {
 	IMeshSceneNode::serializeAttributes(out, options);
 
-	out->addString("Mesh", SceneManager->getMeshCache()->getMeshName(Mesh).getPath().c_str());
+	if (options && (options->Flags&io::EARWF_USE_RELATIVE_PATHS) && options->Filename)
+	{
+		const io::path path = SceneManager->getFileSystem()->getRelativeFilename(
+				SceneManager->getFileSystem()->getAbsolutePath(SceneManager->getMeshCache()->getMeshName(Mesh).getPath()),
+				options->Filename);
+		out->addString("Mesh", path.c_str());
+	}
+	else
+		out->addString("Mesh", SceneManager->getMeshCache()->getMeshName(Mesh).getPath().c_str());
 	out->addBool("ReadOnlyMaterials", ReadOnlyMaterials);
 }
+
 
 //! Reads attributes of the scene node.
 void CMeshSceneNode::deserializeAttributes(io::IAttributes* in, io::SAttributeReadWriteOptions* options)
@@ -341,8 +330,37 @@ void CMeshSceneNode::deserializeAttributes(io::IAttributes* in, io::SAttributeRe
 			setMesh(newMesh);
 	}
 
+	// optional attribute to assign the hint to the whole mesh
+	if (in->existsAttribute("HardwareMappingHint") &&
+		in->existsAttribute("HardwareMappingBufferType"))
+	{
+		scene::E_HARDWARE_MAPPING mapping = scene::EHM_NEVER;
+		scene::E_BUFFER_TYPE bufferType = scene::EBT_NONE;
+
+		core::stringc smapping = in->getAttributeAsString("HardwareMappingHint");
+		if (smapping.equals_ignore_case("static"))
+			mapping = scene::EHM_STATIC;
+		else if (smapping.equals_ignore_case("dynamic"))
+			mapping = scene::EHM_DYNAMIC;
+		else if (smapping.equals_ignore_case("stream"))
+			mapping = scene::EHM_STREAM;
+
+		core::stringc sbufferType = in->getAttributeAsString("HardwareMappingBufferType");
+		if (sbufferType.equals_ignore_case("vertex"))
+			bufferType = scene::EBT_VERTEX;
+		else if (sbufferType.equals_ignore_case("index"))
+			bufferType = scene::EBT_INDEX;
+		else if (sbufferType.equals_ignore_case("vertexindex"))
+			bufferType = scene::EBT_VERTEX_AND_INDEX;
+
+		IMesh* mesh = getMesh();
+		if (mesh)
+			mesh->setHardwareMappingHint(mapping, bufferType);
+	}
+
 	IMeshSceneNode::deserializeAttributes(in, options);
 }
+
 
 //! Sets if the scene node should not copy the materials of the mesh but use them in a read only style.
 /* In this way it is possible to change the materials a mesh causing all mesh scene nodes
@@ -351,6 +369,7 @@ void CMeshSceneNode::setReadOnlyMaterials(bool readonly)
 {
 	ReadOnlyMaterials = readonly;
 }
+
 
 //! Returns if the scene node should not copy the materials of the mesh but use them in a read only style
 bool CMeshSceneNode::isReadOnlyMaterials() const
@@ -362,8 +381,10 @@ bool CMeshSceneNode::isReadOnlyMaterials() const
 //! Creates a clone of this scene node and its children.
 ISceneNode* CMeshSceneNode::clone(ISceneNode* newParent, ISceneManager* newManager)
 {
-	if (!newParent) newParent = Parent;
-	if (!newManager) newManager = SceneManager;
+	if (!newParent)
+		newParent = Parent;
+	if (!newManager)
+		newManager = SceneManager;
 
 	CMeshSceneNode* nb = new CMeshSceneNode(Mesh, newParent,
 		newManager, ID, RelativeTranslation, RelativeRotation, RelativeScale);
@@ -372,11 +393,10 @@ ISceneNode* CMeshSceneNode::clone(ISceneNode* newParent, ISceneManager* newManag
 	nb->ReadOnlyMaterials = ReadOnlyMaterials;
 	nb->Materials = Materials;
 
-	if ( newParent )
+	if (newParent)
 		nb->drop();
 	return nb;
 }
-
 
 
 } // end namespace scene

@@ -1,4 +1,4 @@
-// Copyright (C) 2002-2010 Nikolaus Gebhardt
+// Copyright (C) 2002-2011 Nikolaus Gebhardt
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
@@ -229,6 +229,14 @@ void CGUITable::setColumnWidth(u32 columnIndex, u32 width)
 	recalculateWidths();
 }
 
+//! Get the width of a column
+u32 CGUITable::getColumnWidth(u32 columnIndex) const
+{
+	if ( columnIndex >= Columns.size() )
+		return 0;
+
+	return Columns[columnIndex].Width;
+}
 
 void CGUITable::setResizableColumns(bool resizable)
 {
@@ -457,7 +465,7 @@ void CGUITable::checkScrollbars()
 	{
 		clientClip.LowerRightCorner.Y -= scrollBarSize;
 		HorizontalScrollBar->setVisible(true);
-		HorizontalScrollBar->setMax(TotalItemWidth - clientClip.getWidth());
+		HorizontalScrollBar->setMax(core::max_(0,TotalItemWidth - clientClip.getWidth()));
 	}
 
 	// needs vertical scroll be visible?
@@ -465,7 +473,7 @@ void CGUITable::checkScrollbars()
 	{
 		clientClip.LowerRightCorner.X -= scrollBarSize;
 		VerticalScrollBar->setVisible(true);
-		VerticalScrollBar->setMax(TotalItemHeight - clientClip.getHeight());
+		VerticalScrollBar->setMax(core::max_(0,TotalItemHeight - clientClip.getHeight()));
 
 		// check horizontal again because we have now smaller clientClip
 		if ( !HorizontalScrollBar->isVisible() )
@@ -474,7 +482,7 @@ void CGUITable::checkScrollbars()
 			{
 				clientClip.LowerRightCorner.Y -= scrollBarSize;
 				HorizontalScrollBar->setVisible(true);
-				HorizontalScrollBar->setMax(TotalItemWidth - clientClip.getWidth());
+				HorizontalScrollBar->setMax(core::max_(0,TotalItemWidth - clientClip.getWidth()));
 			}
 		}
 	}
@@ -535,7 +543,7 @@ void CGUITable::refreshControls()
 //! called if an event happened.
 bool CGUITable::OnEvent(const SEvent &event)
 {
-	if (IsEnabled)
+	if (isEnabled())
 	{
 
 		switch(event.EventType)
@@ -567,7 +575,7 @@ bool CGUITable::OnEvent(const SEvent &event)
 			break;
 		case EET_MOUSE_INPUT_EVENT:
 			{
-				if ( !IsEnabled )
+				if ( !isEnabled() )
 					return false;
 
 				core::position2d<s32> p(event.MouseInput.X, event.MouseInput.Y);
@@ -575,7 +583,7 @@ bool CGUITable::OnEvent(const SEvent &event)
 				switch(event.MouseInput.Event)
 				{
 				case EMIE_MOUSE_WHEEL:
-					VerticalScrollBar->setPos(VerticalScrollBar->getPos() + (s32)event.MouseInput.Wheel*-10);
+					VerticalScrollBar->setPos(VerticalScrollBar->getPos() + (event.MouseInput.Wheel < 0 ? -1 : 1)*-10);
 					return true;
 
 				case EMIE_LMOUSE_PRESSED_DOWN:
@@ -888,13 +896,10 @@ void CGUITable::draw()
 	// area of for the items (without header and without scrollbars)
 	core::rect<s32> clientClip(tableRect);
 	clientClip.UpperLeftCorner.Y = headerBottom + 1;
-
-	core::rect<s32>* clipRect = 0;
-	if (Clip)
-		clipRect = &AbsoluteClippingRect;
+	clientClip.clipAgainst(AbsoluteClippingRect);
 
 	// draw background for whole element
-	skin->draw3DSunkenPane(this, skin->getColor(EGDC_3D_HIGH_LIGHT), true, DrawBack, AbsoluteRect, clipRect);
+	skin->draw3DSunkenPane(this, skin->getColor(EGDC_3D_HIGH_LIGHT), true, DrawBack, AbsoluteRect, &AbsoluteClippingRect);
 
 	// scrolledTableClient is the area where the table items would be if it could be drawn completely
 	core::rect<s32> scrolledTableClient(tableRect);
@@ -945,13 +950,13 @@ void CGUITable::draw()
 				// draw item text
 				if ((s32)i == Selected)
 				{
-					font->draw(Rows[i].Items[j].BrokenText.c_str(), textRect, skin->getColor(IsEnabled ? EGDC_HIGH_LIGHT_TEXT : EGDC_GRAY_TEXT), false, true, &clientClip);
+					font->draw(Rows[i].Items[j].BrokenText.c_str(), textRect, skin->getColor(isEnabled() ? EGDC_HIGH_LIGHT_TEXT : EGDC_GRAY_TEXT), false, true, &clientClip);
 				}
 				else
 				{
 					if ( !Rows[i].Items[j].IsOverrideColor )	// skin-colors can change
 						Rows[i].Items[j].Color = skin->getColor(EGDC_BUTTON_TEXT);
-					font->draw(Rows[i].Items[j].BrokenText.c_str(), textRect, IsEnabled ? Rows[i].Items[j].Color : skin->getColor(EGDC_GRAY_TEXT), false, true, &clientClip);
+					font->draw(Rows[i].Items[j].BrokenText.c_str(), textRect, isEnabled() ? Rows[i].Items[j].Color : skin->getColor(EGDC_GRAY_TEXT), false, true, &clientClip);
 				}
 
 				pos += Columns[j].Width;
@@ -965,6 +970,9 @@ void CGUITable::draw()
 	core::rect<s32> columnSeparator(clientClip);
 	pos = scrolledTableClient.UpperLeftCorner.X;
 
+	core::rect<s32> tableClip(tableRect);
+	tableClip.clipAgainst(AbsoluteClippingRect);
+
 	for (u32 i = 0 ; i < Columns.size() ; ++i )
 	{
 		const wchar_t* text = Columns[i].Name.c_str();
@@ -975,19 +983,19 @@ void CGUITable::draw()
 		core::rect<s32> columnrect(pos, tableRect.UpperLeftCorner.Y, pos + colWidth, headerBottom);
 
 		// draw column background
-		skin->draw3DButtonPaneStandard(this, columnrect, &tableRect);
+		skin->draw3DButtonPaneStandard(this, columnrect, &tableClip);
 
 		// draw column seperator
 		if ( DrawFlags & EGTDF_COLUMNS )
 		{
 			columnSeparator.UpperLeftCorner.X = pos;
 			columnSeparator.LowerRightCorner.X = pos + 1;
-			driver->draw2DRectangle(skin->getColor(EGDC_3D_SHADOW), columnSeparator, &tableRect);
+			driver->draw2DRectangle(skin->getColor(EGDC_3D_SHADOW), columnSeparator, &tableClip);
 		}
 
 		// draw header column text
 		columnrect.UpperLeftCorner.X += CellWidthPadding;
-		font->draw(text, columnrect, skin->getColor( IsEnabled ? EGDC_BUTTON_TEXT : EGDC_GRAY_TEXT), false, true, &tableRect);
+		font->draw(text, columnrect, skin->getColor( isEnabled() ? EGDC_BUTTON_TEXT : EGDC_GRAY_TEXT), false, true, &tableClip);
 
 		// draw icon for active column tab
 		if ( (s32)i == ActiveTab )
@@ -996,13 +1004,13 @@ void CGUITable::draw()
 			{
 				columnrect.UpperLeftCorner.X = columnrect.LowerRightCorner.X - CellWidthPadding - ARROW_PAD / 2 + 2;
 				columnrect.UpperLeftCorner.Y += 7;
-				skin->drawIcon(this,EGDI_CURSOR_UP,columnrect.UpperLeftCorner,0,0,false,&tableRect);
+				skin->drawIcon(this,EGDI_CURSOR_UP,columnrect.UpperLeftCorner,0,0,false,&tableClip);
 			}
 			else
 			{
 				columnrect.UpperLeftCorner.X = columnrect.LowerRightCorner.X - CellWidthPadding - ARROW_PAD / 2 + 2;
 				columnrect.UpperLeftCorner.Y += 7;
-				skin->drawIcon(this,EGDI_CURSOR_DOWN,columnrect.UpperLeftCorner,0,0,false,&tableRect);
+				skin->drawIcon(this,EGDI_CURSOR_DOWN,columnrect.UpperLeftCorner,0,0,false,&tableClip);
 			}
 		}
 
@@ -1011,7 +1019,7 @@ void CGUITable::draw()
 
 	// fill up header background up to the right side
 	core::rect<s32> columnrect(pos, tableRect.UpperLeftCorner.Y, tableRect.LowerRightCorner.X , headerBottom);
-	skin->draw3DButtonPaneStandard(this, columnrect, &tableRect);
+	skin->draw3DButtonPaneStandard(this, columnrect, &tableClip);
 
 	IGUIElement::draw();
 }

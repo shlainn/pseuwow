@@ -1,4 +1,4 @@
-// Copyright (C) 2002-2010 Nikolaus Gebhardt
+// Copyright (C) 2002-2011 Nikolaus Gebhardt
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
@@ -76,6 +76,9 @@ namespace scene
 		/** If the camera's target and rotation are bound ( @see
 		bindTargetAndRotation() ) then calling this will also change
 		the camera's scene node rotation to match the target.
+		Note that setTarget uses the current absolute position 
+		internally, so if you changed setPosition since last rendering you must
+		call updateAbsolutePosition before using this function.
 		\param pos Look at target of the camera, in world co-ordinates. */
 		virtual void setTarget(const core::vector3df& pos) =0;
 
@@ -166,7 +169,33 @@ namespace scene
 		/** @see bindTargetAndRotation() */
 		virtual bool getTargetAndRotationBinding(void) const =0;
 
+		//! Writes attributes of the camera node
+		virtual void serializeAttributes(io::IAttributes* out, io::SAttributeReadWriteOptions* options=0) const
+		{
+			ISceneNode::serializeAttributes(out, options);
+
+			if (!out)
+				return;
+			out->addBool	("IsOrthogonal", IsOrthogonal );
+		}
+
+		//! Reads attributes of the camera node
+		virtual void deserializeAttributes(io::IAttributes* in, io::SAttributeReadWriteOptions* options=0)
+		{
+			ISceneNode::deserializeAttributes(in, options);
+			if (!in)
+				return;
+
+			if ( in->findAttribute("IsOrthogonal") )
+				IsOrthogonal = in->getAttributeAsBool("IsOrthogonal");
+		}
+
 	protected:
+
+		void cloneMembers(ICameraSceneNode* toCopyFrom)
+		{
+			IsOrthogonal = toCopyFrom->IsOrthogonal;
+		}
 
 		bool IsOrthogonal;
 	};

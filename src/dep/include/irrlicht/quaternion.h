@@ -1,4 +1,4 @@
-// Copyright (C) 2002-2010 Nikolaus Gebhardt
+// Copyright (C) 2002-2011 Nikolaus Gebhardt
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
@@ -120,8 +120,29 @@ class quaternion
 		//! Inverts this quaternion
 		quaternion& makeInverse();
 
-		//! Set this quaternion to the result of the interpolation between two quaternions
-		quaternion& slerp( quaternion q1, quaternion q2, f32 interpolate );
+		//! Set this quaternion to the linear interpolation between two quaternions
+		/** \param q1 First quaternion to be interpolated.
+		\param q2 Second quaternion to be interpolated.
+		\param time Progress of interpolation. For time=0 the result is
+		q1, for time=1 the result is q2. Otherwise interpolation
+		between q1 and q2.
+		*/
+		quaternion& lerp(quaternion q1, quaternion q2, f32 time);
+
+		//! Set this quaternion to the result of the spherical interpolation between two quaternions
+		/** \param q1 First quaternion to be interpolated.
+		\param q2 Second quaternion to be interpolated.
+		\param time Progress of interpolation. For time=0 the result is
+		q1, for time=1 the result is q2. Otherwise interpolation
+		between q1 and q2.
+		\param threshold To avoid inaccuracies at the end (time=1) the
+		interpolation switches to linear interpolation at some point.
+		This value defines how much of the remaining interpolation will
+		be calculated with lerp. Everything from 1-threshold up will be
+		linear interpolation.
+		*/
+		quaternion& slerp(quaternion q1, quaternion q2,
+				f32 time, f32 threshold=.05f);
 
 		//! Create quaternion from rotation angle and rotation axis.
 		/** Axis must be unit length.
@@ -490,43 +511,36 @@ inline quaternion& quaternion::normalize()
 }
 
 
+// set this quaternion to the result of the linear interpolation between two quaternions
+inline quaternion& quaternion::lerp(quaternion q1, quaternion q2, f32 time)
+{
+	const f32 scale = 1.0f - time;
+	return (*this = (q1*scale) + (q2*time));
+}
+
+
 // set this quaternion to the result of the interpolation between two quaternions
-inline quaternion& quaternion::slerp(quaternion q1, quaternion q2, f32 time)
+inline quaternion& quaternion::slerp(quaternion q1, quaternion q2, f32 time, f32 threshold)
 {
 	f32 angle = q1.dotProduct(q2);
 
+	// make sure we use the short rotation
 	if (angle < 0.0f)
 	{
 		q1 *= -1.0f;
 		angle *= -1.0f;
 	}
 
-	f32 scale;
-	f32 invscale;
-
-	if ((angle + 1.0f) > 0.05f)
+	if (angle <= (1-threshold)) // spherical interpolation
 	{
-		if ((1.0f - angle) >= 0.05f) // spherical interpolation
-		{
-			const f32 theta = acosf(angle);
-			const f32 invsintheta = reciprocal(sinf(theta));
-			scale = sinf(theta * (1.0f-time)) * invsintheta;
-			invscale = sinf(theta * time) * invsintheta;
-		}
-		else // linear interploation
-		{
-			scale = 1.0f - time;
-			invscale = time;
-		}
+		const f32 theta = acosf(angle);
+		const f32 invsintheta = reciprocal(sinf(theta));
+		const f32 scale = sinf(theta * (1.0f-time)) * invsintheta;
+		const f32 invscale = sinf(theta * time) * invsintheta;
+		return (*this = (q1*scale) + (q2*invscale));
 	}
-	else
-	{
-		q2.set(-q1.Y, q1.X, -q1.W, q1.Z);
-		scale = sinf(PI * (0.5f - time));
-		invscale = sinf(PI * time);
-	}
-
-	return (*this = (q1*scale) + (q2*invscale));
+	else // linear interploation
+		return lerp(q1,q2,time);
 }
 
 
@@ -537,8 +551,7 @@ inline f32 quaternion::dotProduct(const quaternion& q2) const
 }
 
 
-//! axis must be unit length
-//! angle in radians
+//! axis must be unit length, angle in radians
 inline quaternion& quaternion::fromAngleAxis(f32 angle, const vector3df& axis)
 {
 	const f32 fHalfAngle = 0.5f*angle;
@@ -578,15 +591,35 @@ inline void quaternion::toEuler(vector3df& euler) const
 	const f64 sqx = X*X;
 	const f64 sqy = Y*Y;
 	const f64 sqz = Z*Z;
+	const f64 test = 2.0 * (Y*W - X*Z);
 
-	// heading = rotation about z-axis
-	euler.Z = (f32) (atan2(2.0 * (X*Y +Z*W),(sqx - sqy - sqz + sqw)));
-
-	// bank = rotation about x-axis
-	euler.X = (f32) (atan2(2.0 * (Y*Z +X*W),(-sqx - sqy + sqz + sqw)));
-
-	// attitude = rotation about y-axis
-	euler.Y = asinf( clamp(-2.0f * (X*Z - Y*W), -1.0f, 1.0f) );
+	if (core::equals(test, 1.0, 0.000001))
+	{
+		// heading = rotation about z-axis
+		euler.Z = (f32) (-2.0*atan2(X, W));
+		// bank = rotation about x-axis
+		euler.X = 0;
+		// attitude = rotation about y-axis
+		euler.Y = (f32) (core::PI64/2.0);
+	}
+	else if (core::equals(test, -1.0, 0.000001))
+	{
+		// heading = rotation about z-axis
+		euler.Z = (f32) (2.0*atan2(X, W));
+		// bank = rotation about x-axis
+		euler.X = 0;
+		// attitude = rotation about y-axis
+		euler.Y = (f32) (core::PI64/-2.0);
+	}
+	else
+	{
+		// heading = rotation about z-axis
+		euler.Z = (f32) atan2(2.0 * (X*Y +Z*W),(sqx - sqy - sqz + sqw));
+		// bank = rotation about x-axis
+		euler.X = (f32) atan2(2.0 * (Y*Z +X*W),(-sqx - sqy + sqz + sqw));
+		// attitude = rotation about y-axis
+		euler.Y = (f32) asin( clamp(test, -1.0, 1.0) );
+	}
 }
 
 
@@ -631,24 +664,20 @@ inline core::quaternion& quaternion::rotationFromTo(const vector3df& from, const
 	else if (d <= -1.0f) // exactly opposite
 	{
 		core::vector3df axis(1.0f, 0.f, 0.f);
-		axis = axis.crossProduct(core::vector3df(X,Y,Z));
+		axis = axis.crossProduct(v0);
 		if (axis.getLength()==0)
 		{
 			axis.set(0.f,1.f,0.f);
-			axis.crossProduct(core::vector3df(X,Y,Z));
+			axis.crossProduct(v0);
 		}
-		return this->fromAngleAxis(core::PI, axis);
+		// same as fromAngleAxis(core::PI, axis).normalize();
+		return set(axis.X, axis.Y, axis.Z, 0).normalize();
 	}
 
 	const f32 s = sqrtf( (1+d)*2 ); // optimize inv_sqrt
 	const f32 invs = 1.f / s;
 	const vector3df c = v0.crossProduct(v1)*invs;
-	X = c.X;
-	Y = c.Y;
-	Z = c.Z;
-	W = s * 0.5f;
-
-	return *this;
+	return set(c.X, c.Y, c.Z, s * 0.5f).normalize();
 }
 
 

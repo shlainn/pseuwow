@@ -111,6 +111,7 @@ jpeglib/jquant2.c
 jpeglib/jutils.c
 
 C3DSMeshFileLoader.cpp
+CAnimatedMeshHalfLife.cpp
 CAnimatedMeshMD2.cpp
 CAnimatedMeshMD3.cpp
 CAnimatedMeshSceneNode.cpp
@@ -121,6 +122,7 @@ CBoneSceneNode.cpp
 CBSPMeshFileLoader.cpp
 CBurningShader_Raster_Reference.cpp
 CCameraSceneNode.cpp
+CCgMaterialRenderer.cpp
 CColladaFileLoader.cpp
 CColladaMeshWriter.cpp
 CColorConverter.cpp
@@ -132,6 +134,7 @@ CCubeSceneNode.cpp
 # CD3D8ShaderMaterialRenderer.cpp
 # CD3D8Texture.cpp
 CD3D9Driver.cpp
+CD3D9CgMaterialRenderer.cpp
 CD3D9HLSLMaterialRenderer.cpp
 CD3D9NormalMapRenderer.cpp
 CD3D9ParallaxMapRenderer.cpp
@@ -177,6 +180,7 @@ CGUITreeView.cpp
 CGUIWindow.cpp
 CImage.cpp
 CImageLoaderBMP.cpp
+CImageLoaderDDS.cpp
 CImageLoaderJPG.cpp
 CImageLoaderPCX.cpp
 CImageLoaderPNG.cpp
@@ -226,6 +230,7 @@ COctreeTriangleSelector.cpp
 COgreMeshFileLoader.cpp
 COpenGLDriver.cpp
 COpenGLExtensionHandler.cpp
+COpenGLCgMaterialRenderer.cpp
 COpenGLNormalMapRenderer.cpp
 COpenGLParallaxMapRenderer.cpp
 COpenGLShaderMaterialRenderer.cpp
@@ -252,6 +257,7 @@ CQ3LevelMesh.cpp
 CQuake3ShaderSceneNode.cpp
 CReadFile.cpp
 CSceneCollisionManager.cpp
+CSceneLoaderIrr.cpp
 CSceneManager.cpp
 CSceneNodeAnimatorCameraFPS.cpp
 CSceneNodeAnimatorCameraMaya.cpp
@@ -266,6 +272,7 @@ CShadowVolumeSceneNode.cpp
 CSkinnedMesh.cpp
 CSkyBoxSceneNode.cpp
 CSkyDomeSceneNode.cpp
+CSMFMeshFileLoader.cpp
 CSoftwareDriver.cpp
 CSoftwareDriver2.cpp
 CSoftwareTexture.cpp
@@ -286,6 +293,8 @@ CTRGouraudAlphaNoZ2.cpp
 CTRGouraudWire.cpp
 CTriangleBBSelector.cpp
 CTriangleSelector.cpp
+CTRNormalMap.cpp
+CTRStencilShadow.cpp
 CTRTextureBlend.cpp
 CTRTextureDetailMap2.cpp
 CTRTextureFlat.cpp
@@ -309,6 +318,7 @@ CTRTextureLightMapGouraud2_M4.cpp
 CTRTextureWire2.cpp
 CVideoModeList.cpp
 CVolumeLightSceneNode.cpp
+CWADReader.cpp
 CWaterSurfaceSceneNode.cpp
 CWriteFile.cpp
 CXMeshFileLoader.cpp

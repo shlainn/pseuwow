@@ -1,4 +1,4 @@
-// Copyright (C) 2009-2010 Gaz Davidson
+// Copyright (C) 2009-2011 Gaz Davidson
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
@@ -23,10 +23,11 @@ namespace scene
 #define PLY_INPUT_BUFFER_SIZE 51200 // file is loaded in 50k chunks
 
 // constructor
-CPLYMeshFileLoader::CPLYMeshFileLoader()
-: File(0), Buffer(0)
+CPLYMeshFileLoader::CPLYMeshFileLoader(scene::ISceneManager* smgr)
+: SceneManager(smgr), File(0), Buffer(0)
 {
 }
+
 
 CPLYMeshFileLoader::~CPLYMeshFileLoader()
 {
@@ -43,6 +44,7 @@ CPLYMeshFileLoader::~CPLYMeshFileLoader()
 		delete ElementList[i];
 	ElementList.clear();
 }
+
 
 //! returns true if the file maybe is able to be loaded by this class
 bool CPLYMeshFileLoader::isALoadableFileExtension(const io::path& filename) const
@@ -80,18 +82,18 @@ IAnimatedMesh* CPLYMeshFileLoader::createMesh(io::IReadFile* file)
 	else
 	{
 		// cut the next line out
-		c8 *line = getNextLine();
+		getNextLine();
 		// grab the word from this line
 		c8 *word = getNextWord();
 
 		// ignore comments
 		while (strcmp(word, "comment") == 0)
 		{
-			line = getNextLine();
+			getNextLine();
 			word = getNextWord();
 		}
 
-		bool readingHeader   = true;
+		bool readingHeader = true;
 		bool continueReading = true;
 		IsBinaryFile = false;
 		IsWrongEndian= false;
@@ -102,8 +104,8 @@ IAnimatedMesh* CPLYMeshFileLoader::createMesh(io::IReadFile* file)
 			{
 				word = getNextWord();
 
-				if      (strcmp(word, "binary_little_endian") == 0)
-				{
+				if (strcmp(word, "binary_little_endian") == 0)
+ {
 					IsBinaryFile = true;
 #ifdef __BIG_ENDIAN__
 					IsWrongEndian = true;
@@ -186,10 +188,10 @@ IAnimatedMesh* CPLYMeshFileLoader::createMesh(io::IReadFile* file)
 					el->Properties.push_back(prop);
 				}
 			}
-			else if (strcmp(word, "element")    == 0)
+			else if (strcmp(word, "element") == 0)
 			{
 				SPLYElement* el = new SPLYElement;
-				el->Name  = getNextWord();
+				el->Name = getNextWord();
 				el->Count = atoi(getNextWord());
 				el->IsFixedWidth = true;
 				el->KnownSize = 0;
@@ -218,7 +220,7 @@ IAnimatedMesh* CPLYMeshFileLoader::createMesh(io::IReadFile* file)
 
 			if (readingHeader && continueReading)
 			{
-				line = getNextLine();
+				getNextLine();
 				word = getNextWord();
 			}
 		}
@@ -233,6 +235,7 @@ IAnimatedMesh* CPLYMeshFileLoader::createMesh(io::IReadFile* file)
 			mb->getIndexBuffer().reallocate(vertCount);
 			mb->setHardwareMappingHint(EHM_STATIC);
 
+			bool hasNormals=true;
 			// loop through each of the elements
 			for (u32 i=0; i<ElementList.size(); ++i)
 			{
@@ -241,7 +244,7 @@ IAnimatedMesh* CPLYMeshFileLoader::createMesh(io::IReadFile* file)
 				{
 					// loop through vertex properties
 					for (u32 j=0; j < ElementList[i]->Count; ++j)
-						readVertex(*ElementList[i], mb);
+						hasNormals &= readVertex(*ElementList[i], mb);
 				}
 				else if (ElementList[i]->Name == "face")
 				{
@@ -257,6 +260,8 @@ IAnimatedMesh* CPLYMeshFileLoader::createMesh(io::IReadFile* file)
 				}
 			}
 			mb->recalculateBoundingBox();
+			if (!hasNormals)
+				SceneManager->getMeshManipulator()->recalculateNormals(mb);
 			SMesh* m = new SMesh();
 			m->addMeshBuffer(mb);
 			m->recalculateBoundingBox();
@@ -279,6 +284,7 @@ IAnimatedMesh* CPLYMeshFileLoader::createMesh(io::IReadFile* file)
 	return animMesh;
 }
 
+
 bool CPLYMeshFileLoader::readVertex(const SPLYElement &Element, scene::CDynamicMeshBuffer* mb)
 {
 	if (!IsBinaryFile)
@@ -292,22 +298,32 @@ bool CPLYMeshFileLoader::readVertex(const SPLYElement &Element, scene::CDynamicM
 	vert.Normal.Y = 1.0f;
 	vert.Normal.Z = 0.0f;
 
+	bool result=false;
 	for (u32 i=0; i < Element.Properties.size(); ++i)
 	{
 		E_PLY_PROPERTY_TYPE t = Element.Properties[i].Type;
 
-		if      (Element.Properties[i].Name == "x")
+		if (Element.Properties[i].Name == "x")
 			vert.Pos.X = getFloat(t);
 		else if (Element.Properties[i].Name == "y")
 			vert.Pos.Z = getFloat(t);
 		else if (Element.Properties[i].Name == "z")
 			vert.Pos.Y = getFloat(t);
 		else if (Element.Properties[i].Name == "nx")
+		{
 			vert.Normal.X = getFloat(t);
+			result=true;
+		}
 		else if (Element.Properties[i].Name == "ny")
+		{
 			vert.Normal.Z = getFloat(t);
+			result=true;
+		}
 		else if (Element.Properties[i].Name == "nz")
+		{
 			vert.Normal.Y = getFloat(t);
+			result=true;
+		}
 		else if (Element.Properties[i].Name == "u")
 			vert.TCoords.X = getFloat(t);
 		else if (Element.Properties[i].Name == "v")
@@ -338,8 +354,9 @@ bool CPLYMeshFileLoader::readVertex(const SPLYElement &Element, scene::CDynamicM
 
 	mb->getVertexBuffer().push_back(vert);
 
-	return true;
+	return result;
 }
+
 
 bool CPLYMeshFileLoader::readFace(const SPLYElement &Element, scene::CDynamicMeshBuffer* mb)
 {
@@ -349,7 +366,7 @@ bool CPLYMeshFileLoader::readFace(const SPLYElement &Element, scene::CDynamicMes
 	for (u32 i=0; i < Element.Properties.size(); ++i)
 	{
 		if ( (Element.Properties[i].Name == "vertex_indices" ||
-			  Element.Properties[i].Name == "vertex_index") && Element.Properties[i].Type == EPLYPT_LIST)
+			Element.Properties[i].Name == "vertex_index") && Element.Properties[i].Type == EPLYPT_LIST)
 		{
 			// get count
 			s32 count = getInt(Element.Properties[i].Data.List.CountType);
@@ -382,6 +399,7 @@ bool CPLYMeshFileLoader::readFace(const SPLYElement &Element, scene::CDynamicMes
 	return true;
 }
 
+
 // skips an element and all properties. return false on EOF
 void CPLYMeshFileLoader::skipElement(const SPLYElement &Element)
 {
@@ -394,6 +412,7 @@ void CPLYMeshFileLoader::skipElement(const SPLYElement &Element)
 	else
 		getNextLine();
 }
+
 
 void CPLYMeshFileLoader::skipProperty(const SPLYProperty &Property)
 {
@@ -431,11 +450,11 @@ bool CPLYMeshFileLoader::allocateBuffer()
 	// blank memory
 	memset(Buffer, 0, PLY_INPUT_BUFFER_SIZE);
 
-	StartPointer   = Buffer;
-	EndPointer     = Buffer;
+	StartPointer = Buffer;
+	EndPointer = Buffer;
 	LineEndPointer = Buffer-1;
-	WordLength     = -1;
-	EndOfFile      = false;
+	WordLength = -1;
+	EndOfFile = false;
 
 	// get data from the file
 	fillBuffer();
@@ -443,13 +462,14 @@ bool CPLYMeshFileLoader::allocateBuffer()
 	return true;
 }
 
+
 // gets more data from the file. returns false on EOF
 void CPLYMeshFileLoader::fillBuffer()
 {
 	if (EndOfFile)
 		return;
 
-	u32 length = EndPointer - StartPointer;
+	u32 length = (u32)(EndPointer - StartPointer);
 	if (length && StartPointer != Buffer)
 	{
 		// copy the remaining data to the start of the buffer
@@ -457,7 +477,7 @@ void CPLYMeshFileLoader::fillBuffer()
 	}
 	// reset start position
 	StartPointer = Buffer;
-	EndPointer   = StartPointer + length;
+	EndPointer = StartPointer + length;
 
 	if (File->getPos() == File->getSize())
 	{
@@ -483,6 +503,7 @@ void CPLYMeshFileLoader::fillBuffer()
 	}
 }
 
+
 // skips x bytes in the file, getting more data if required
 void CPLYMeshFileLoader::moveForward(u32 bytes)
 {
@@ -494,38 +515,39 @@ void CPLYMeshFileLoader::moveForward(u32 bytes)
 		StartPointer = EndPointer;
 }
 
+
 E_PLY_PROPERTY_TYPE CPLYMeshFileLoader::getPropertyType(const c8* typeString) const
 {
-	if      (strcmp(typeString, "char")   == 0 ||
-	         strcmp(typeString, "uchar")  == 0 ||
-	         strcmp(typeString, "int8")   == 0 ||
-	         strcmp(typeString, "uint8")  == 0)
+	if (strcmp(typeString, "char") == 0 ||
+		strcmp(typeString, "uchar") == 0 ||
+		strcmp(typeString, "int8") == 0 ||
+		strcmp(typeString, "uint8") == 0)
 	{
 		return EPLYPT_INT8;
 	}
-	else if (strcmp(typeString, "uint")   == 0 ||
-	         strcmp(typeString, "int16")  == 0 ||
-	         strcmp(typeString, "uint16") == 0 ||
-	         strcmp(typeString, "short")  == 0 ||
-	         strcmp(typeString, "ushort") == 0)
+	else if (strcmp(typeString, "uint") == 0 ||
+		strcmp(typeString, "int16") == 0 ||
+		strcmp(typeString, "uint16") == 0 ||
+		strcmp(typeString, "short") == 0 ||
+		strcmp(typeString, "ushort") == 0)
 	{
 		return EPLYPT_INT16;
 	}
-	else if (strcmp(typeString, "int")    == 0 ||
-	         strcmp(typeString, "long")   == 0 ||
-	         strcmp(typeString, "ulong")  == 0 ||
-	         strcmp(typeString, "int32")  == 0 ||
-	         strcmp(typeString, "uint32") == 0)
+	else if (strcmp(typeString, "int") == 0 ||
+		strcmp(typeString, "long") == 0 ||
+		strcmp(typeString, "ulong") == 0 ||
+		strcmp(typeString, "int32") == 0 ||
+		strcmp(typeString, "uint32") == 0)
 	{
 		return EPLYPT_INT32;
 	}
-	else if (strcmp(typeString, "float")   == 0 ||
-	         strcmp(typeString, "float32") == 0)
+	else if (strcmp(typeString, "float") == 0 ||
+		strcmp(typeString, "float32") == 0)
 	{
 		return EPLYPT_FLOAT32;
 	}
 	else if (strcmp(typeString, "float64") == 0 ||
-	         strcmp(typeString, "double")  == 0)
+		strcmp(typeString, "double") == 0)
 	{
 		return EPLYPT_FLOAT64;
 	}
@@ -599,6 +621,8 @@ c8* CPLYMeshFileLoader::getNextLine()
 		return StartPointer;
 	}
 }
+
+
 // null terminate the next word on the previous line and move the next word pointer along
 // since we already have a full line in the buffer, we never need to retrieve more data
 c8* CPLYMeshFileLoader::getNextWord()
@@ -623,10 +647,12 @@ c8* CPLYMeshFileLoader::getNextWord()
 		++pos;
 	}
 	--pos;
-	WordLength = pos-StartPointer;
+	WordLength = (s32)(pos-StartPointer);
 	// return pointer to the start of the word
 	return StartPointer;
 }
+
+
 // read the next float from the file and move the start pointer along
 f32 CPLYMeshFileLoader::getFloat(E_PLY_PROPERTY_TYPE t)
 {
@@ -703,6 +729,8 @@ f32 CPLYMeshFileLoader::getFloat(E_PLY_PROPERTY_TYPE t)
 	}
 	return retVal;
 }
+
+
 // read the next int from the file and move the start pointer along
 u32 CPLYMeshFileLoader::getInt(E_PLY_PROPERTY_TYPE t)
 {

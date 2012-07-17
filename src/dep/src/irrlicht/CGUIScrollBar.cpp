@@ -1,4 +1,4 @@
-// Copyright (C) 2002-2010 Nikolaus Gebhardt
+// Copyright (C) 2002-2011 Nikolaus Gebhardt
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
@@ -59,7 +59,7 @@ CGUIScrollBar::~CGUIScrollBar()
 //! called if an event happened.
 bool CGUIScrollBar::OnEvent(const SEvent& event)
 {
-	if (IsEnabled)
+	if (isEnabled())
 	{
 
 		switch(event.EventType)
@@ -146,7 +146,7 @@ bool CGUIScrollBar::OnEvent(const SEvent& event)
 					// thanks to tommi by tommi for another bugfix
 					// everybody needs a little thanking. hallo niko!;-)
 					setPos(	getPos() +
-							( (s32)event.MouseInput.Wheel * SmallStep * (Horizontal ? 1 : -1 ) )
+							( (event.MouseInput.Wheel < 0 ? -1 : 1) * SmallStep * (Horizontal ? 1 : -1 ) )
 							);
 
 					SEvent newEvent;
@@ -178,7 +178,11 @@ bool CGUIScrollBar::OnEvent(const SEvent& event)
 					Dragging = false;
 
 				if ( !Dragging )
+				{
+					if ( event.MouseInput.Event == EMIE_MOUSE_MOVED )
+						break;
 					return isInside;
+				}
 
 				if ( event.MouseInput.Event == EMIE_LMOUSE_LEFT_UP )
 					Dragging = false;
@@ -280,7 +284,7 @@ void CGUIScrollBar::draw()
 		return;
 
 
-	video::SColor iconColor = skin->getColor(EGDC_WINDOW_SYMBOL);
+	video::SColor iconColor = skin->getColor(isEnabled() ? EGDC_WINDOW_SYMBOL : EGDC_GRAY_WINDOW_SYMBOL);
 	if ( iconColor != CurrentIconColor )
 	{
 		refreshControls();
@@ -406,7 +410,9 @@ s32 CGUIScrollBar::getMax() const
 //! sets the maximum value of the scrollbar.
 void CGUIScrollBar::setMax(s32 max)
 {
-	Max = core::max_ ( max, Min );
+	Max = max;
+	if ( Min > Max )
+		Min = Max;
 
 	bool enable = core::isnotzero ( range() );
 	UpButton->setEnabled(enable);
@@ -424,7 +430,10 @@ s32 CGUIScrollBar::getMin() const
 //! sets the minimum value of the scrollbar.
 void CGUIScrollBar::setMin(s32 min)
 {
-	Min = core::min_ ( min, Max );
+	Min = min;
+	if ( Max < Min )
+		Max = Min;
+
 
 	bool enable = core::isnotzero ( range() );
 	UpButton->setEnabled(enable);
@@ -451,7 +460,7 @@ void CGUIScrollBar::refreshControls()
 	if (skin)
 	{
 		sprites = skin->getSpriteBank();
-		CurrentIconColor = skin->getColor(EGDC_WINDOW_SYMBOL);
+		CurrentIconColor = skin->getColor(isEnabled() ? EGDC_WINDOW_SYMBOL : EGDC_GRAY_WINDOW_SYMBOL);
 	}
 
 	if (Horizontal)

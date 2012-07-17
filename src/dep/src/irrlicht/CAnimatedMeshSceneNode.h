@@ -1,4 +1,4 @@
-// Copyright (C) 2002-2010 Nikolaus Gebhardt
+// Copyright (C) 2002-2011 Nikolaus Gebhardt
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
@@ -88,10 +88,10 @@ namespace scene
 		//! Gets joint count.
 		virtual u32 getJointCount() const;
 
-		//! Redundant command, please use getJointNode.
+		//! Deprecated command, please use getJointNode.
 		virtual ISceneNode* getMS3DJointNode(const c8* jointName);
 
-		//! Redundant command, please use getJointNode.
+		//! Deprecated command, please use getJointNode.
 		virtual ISceneNode* getXJointNode(const c8* jointName);
 
 		//! Removes a child from this scene node.
